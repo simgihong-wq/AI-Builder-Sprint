@@ -1,0 +1,22 @@
+# 비밀 정보 — 절대 커밋 금지
+.env
+*.key
+**/secrets*
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Node
+node_modules/
+dist/
+
+# OS/에디터
+.DS_Store
+Thumbs.db
+*.log
+
+# 실개인정보 포함 원본 캡처 (가짜 정보 재제작본만 test-data/에 커밋)
+raw-captures/
