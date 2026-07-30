@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>약속지킴이 — 백엔드 결과 미리보기</title>
+<style>
+  :root {
+    --color-bg: #f2f4f6;
+    --color-surface: #ffffff;
+    --color-ink: #191f28;
+    --color-text-secondary: #4e5968;
+    --color-text-tertiary: #8b95a1;
+    --color-border: #e5e8eb;
+    --color-border-soft: #f4f6f8;
+
+    --color-primary: #3182f6;
+    --color-primary-active: #1b64da;
+
+    --color-confirmed: #00c471;
+    --color-confirmed-text: #00a660;
+    --color-confirmed-bg: #e6f9f0;
+
+    --color-warning-bg-soft: #fffbf0;
+    --color-warning-bg: #fff4e5;
+    --color-warning-text: #8a6a20;
+    --color-warning-text-2: #8a5a00;
+
+    --color-danger: #f04452;
+    --color-danger-bg: #fff0f1;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #dfe3e8;
+    color: var(--color-ink);
+    letter-spacing: -0.02em;
+    font-family: "Pretendard", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 32px 12px;
+  }
+
+  .page {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .devnote {
+    background: #191f28;
+    color: #d6e9ff;
+    font-size: 12.5px;
+    line-height: 1.6;
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+  }
+  .devnote b { color: #fff; }
+
+  .tabbar {
+    display: flex;
+    gap: 6px;
+    background: #e9ecef;
+    padding: 4px;
+    border-radius: 12px;
+    margin-bottom: 14px;
+  }
+  .tabbar button {
+    flex: 1;
+    height: 38px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--color-text-tertiary);
+    font-weight: 600;
+    font-size: 13.5px;
+    letter-spacing: -0.02em;
+    cursor: pointer;
+  }
+  .tabbar button.active {
+    background: var(--color-surface);
+    color: var(--color-ink);
+    box-shadow: 0 1px 3px rgba(25,31,40,.1);
+  }
+
+  .phone {
+    background: var(--color-bg);
+    border-radius: 26px;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(25,31,40,.18);
+  }
+
+  .screen { display: none; padding: 4px 20px 34px; }
+  .screen.active { display: block; }
+
+  .navheader {
+    display: flex; align-items: center; height: 52px;
+    font-size: 15px; font-weight: 600;
+  }
+
+  h1.title { margin: 4px 0 8px; font-size: 24px; font-weight: 700; line-height: 1.38; letter-spacing: -0.03em; }
+  p.subtitle { margin: 0 0 24px; font-size: 15px; line-height: 1.5; color: var(--color-text-secondary); }
+
+  .card { background: var(--color-surface); border-radius: 18px; padding: 20px; }
+  .card + .card { margin-top: 12px; }
+
+  .alert-card { display: flex; align-items: center; gap: 14px; }
+  .alert-icon { flex: none; width: 46px; height: 46px; border-radius: 50%; background: var(--color-warning-bg); display: grid; place-items: center; font-size: 22px; }
+  .alert-title { font-size: 17px; font-weight: 700; margin-bottom: 2px; }
+  .alert-sub { font-size: 13px; color: var(--color-text-tertiary); }
+
+  .section-label { margin: 24px 0 10px; font-size: 13px; font-weight: 600; color: var(--color-text-tertiary); }
+
+  .receipt-row { display: flex; justify-content: space-between; gap: 16px; padding: 11px 0; border-top: 1px solid var(--color-border-soft); align-items: flex-start; }
+  .receipt-row.no-divider { border-top: 0; }
+  .receipt-label { flex: none; font-size: 14px; color: var(--color-text-tertiary); }
+  .receipt-value { text-align: right; font-size: 15px; line-height: 1.4; font-weight: 600; color: var(--color-ink); }
+  .receipt-value.muted { font-weight: 500; color: var(--color-text-tertiary); }
+
+  .risk-box { background: var(--color-danger-bg); border-radius: 18px; padding: 18px 20px; }
+  .risk-head { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700; color: var(--color-danger); margin-bottom: 7px; }
+  .risk-quote { font-size: 15px; font-weight: 600; line-height: 1.5; margin-bottom: 6px; }
+  .risk-note { font-size: 13px; line-height: 1.55; color: var(--color-text-secondary); }
+
+  .progress-track { height: 6px; border-radius: 999px; background: var(--color-border); overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 999px; background: var(--color-confirmed); width: 0%; transition: width .3s ease-out; }
+  .progress-label { margin-top: 9px; font-size: 13px; font-weight: 500; color: var(--color-text-tertiary); }
+
+  .checklist-item { background: var(--color-surface); border-radius: 18px; padding: 22px 20px; margin-top: 12px; }
+  .checklist-item:first-child { margin-top: 22px; }
+  .checklist-label { font-size: 12px; font-weight: 700; color: var(--color-primary); margin-bottom: 9px; }
+  .checklist-question { font-size: 19px; font-weight: 700; line-height: 1.45; letter-spacing: -0.03em; margin-bottom: 9px; }
+  .checklist-desc { font-size: 13.5px; line-height: 1.55; color: var(--color-text-tertiary); margin-bottom: 14px; }
+
+  .btn-row { display: flex; align-items: center; gap: 8px; }
+  .copy-btn, .check-btn {
+    height: 44px; border-radius: 12px; font-size: 14px; font-weight: 600;
+    letter-spacing: -0.02em; border: 1px solid var(--color-border); background: var(--color-surface);
+    color: var(--color-text-secondary); padding: 0 14px; cursor: pointer;
+  }
+  .check-btn { display: flex; align-items: center; gap: 7px; border-color: #d1d6db; }
+  .check-btn.checked { border-color: var(--color-confirmed); background: var(--color-confirmed-bg); color: var(--color-confirmed-text); }
+  .check-dot { width: 19px; height: 19px; border-radius: 50%; border: 1.5px solid #c6cdd4; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #fff; }
+  .check-btn.checked .check-dot { border-color: var(--color-confirmed); background: var(--color-confirmed); }
+
+  details.why { margin-top: 14px; border-top: 1px solid var(--color-border-soft); padding-top: 14px; }
+  summary.why-sum { font-size: 13px; font-weight: 600; color: var(--color-text-tertiary); cursor: pointer; }
+  .chat { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .bubble { max-width: 82%; border-radius: 14px; padding: 10px 13px; font-size: 13.5px; line-height: 1.5; }
+  .bubble.me { align-self: flex-end; border-bottom-right-radius: 5px; background: var(--color-primary); color: #fff; }
+  .bubble.other { align-self: flex-start; border-bottom-left-radius: 5px; background: var(--color-bg); color: var(--color-ink); }
+  .bubble mark { background: #ffe8a3; border-radius: 3px; padding: 1px 2px; color: inherit; }
+
+  .promise-card { background: var(--color-surface); border-radius: 22px; overflow: hidden; box-shadow: 0 6px 24px rgba(25,31,40,.07); }
+  .promise-head { padding: 24px 22px 20px; color: #fff; background: linear-gradient(135deg, #3182F6, #1B64DA); }
+  .promise-kicker { font-size: 12px; font-weight: 700; letter-spacing: .02em; opacity: .85; margin-bottom: 12px; }
+  .promise-item { font-size: 20px; font-weight: 700; line-height: 1.35; margin-bottom: 4px; }
+  .promise-price { font-size: 26px; font-weight: 800; letter-spacing: -0.04em; }
+  .promise-body { padding: 6px 22px 20px; }
+  .promise-footer { margin: 0 22px; display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--color-border); padding: 16px 0 22px; }
+  .confirmed-tag { display: flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; color: var(--color-confirmed-text); }
+  .issued-at { font-size: 12px; color: var(--color-text-tertiary); }
+
+  .accessory-warn { margin-top: 12px; background: var(--color-warning-bg); border-radius: 14px; padding: 14px 16px; font-size: 13px; line-height: 1.55; color: var(--color-warning-text-2); }
+
+  .card-note-box { margin-top: 12px; background: var(--color-warning-bg-soft); border-radius: 14px; padding: 14px 16px; }
+  .card-note-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .card-note-warn { font-size: 13px; color: var(--color-warning-text); line-height: 1.55; }
+
+  .meta-box { margin-top: 24px; background: #10151c; color: #9fb0c3; border-radius: 14px; padding: 14px 16px; font-size: 12px; line-height: 1.7; font-family: "SF Mono", ui-monospace, monospace; white-space: pre-wrap; }
+  .meta-box b { color: #d6e9ff; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="devnote">
+    ⚙️ 이 페이지는 실제 백엔드 파이프라인 결과(text_input → extract → validate → judge → card,
+    2026-07-31 <code>tests/fixtures/ipad_chat.txt</code> 기준 실 API 호출)를
+    <b>frontend/</b>의 디자인 스타일로 시각화한 개발용 미리보기입니다.
+    <b>frontend/ 파일은 한 줄도 수정하지 않았습니다.</b>
+  </div>
+
+  <div class="tabbar">
+    <button data-tab="summary" class="active">결과 요약</button>
+    <button data-tab="checklist">체크리스트</button>
+    <button data-tab="card">약속 카드</button>
+  </div>
+
+  <div class="phone">
+    <section id="screen-summary" class="screen active">
+      <div class="navheader">거래 분석 결과</div>
+      <h1 class="title" id="summary-title"></h1>
+      <p class="subtitle">대화 <span id="summary-msgcount"></span>개를 읽고 정리했어요.</p>
+
+      <div class="card alert-card">
+        <div class="alert-icon">⚠️</div>
+        <div>
+          <div class="alert-title">주의가 필요한 거래예요</div>
+          <div class="alert-sub" id="summary-alertsub"></div>
+        </div>
+      </div>
+
+      <div class="section-label">정해진 약속</div>
+      <div class="card" id="summary-facts"></div>
+
+      <div id="summary-risk-wrap"></div>
+    </section>
+
+    <section id="screen-checklist" class="screen">
+      <div class="navheader">확인 체크리스트</div>
+      <h1 class="title" id="checklist-title"></h1>
+      <p class="subtitle">복사해서 그대로 보내세요.</p>
+
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="progress-label" id="progress-label"></div>
+
+      <div id="checklist-items"></div>
+    </section>
+
+    <section id="screen-card" class="screen">
+      <div class="navheader">약속 카드</div>
+      <h1 class="title">약속이<br />정리됐어요</h1>
+      <p class="subtitle">거래 전에 서로 한 번씩 확인해보세요.</p>
+
+      <div class="promise-card">
+        <div class="promise-head">
+          <div class="promise-kicker">PROMISE CARD</div>
+          <div class="promise-item" id="card-item"></div>
+          <div class="promise-price" id="card-price"></div>
+        </div>
+        <div class="promise-body" id="card-body"></div>
+        <div class="promise-footer">
+          <span class="confirmed-tag">✓ 양쪽 확인 완료</span>
+          <span class="issued-at" id="card-issued"></span>
+        </div>
+      </div>
+
+      <div id="card-accessory-warn"></div>
+      <div id="card-solar-note"></div>
+
+      <div class="meta-box" id="meta-box"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+const DATA = {"result": {"item": "아이패드 에어 5세대 64GB", "final_price": 370000, "location": "개금역 1번 출구", "datetime": "2026-01-28 22:30", "delivery_method": "직거래", "payment_method": "안심결제", "accessories": [], "refund_policy": null, "condition_info": "배터리 성능 확인 안해봐서 모름", "risk_signals": ["제가 급전이 필요해서"], "conflicts": ["게시글 가격은 31만원인데 실제 대화에서는 37만원으로 합의됨"], "missing_items": ["배터리 성능", "계좌번호", "전화번호", "상세주소"], "risk_notes": ["상대방이 '제가 급전이 필요해서'라고 언급한 것은 거래 압박이나 급한 상황을 암시할 수 있어, 상대방이 무리한 요구를 하거나 거래 조건을 급하게 변경하려는 시도로 이어질 수 있으므로 주의가 필요합니다. 상대방의 재정 상황과 거래 동기에 대해 추가로 확인하는 것이 좋습니다.", "게시글 가격(31만원)과 실제 합의 가격(37만원) 사이에 6만원 차이가 있어 가격 협상 과정에서 혼란이 발생할 수 있습니다. 최종 합의된 금액(37만원)을 명확히 재확인하고, 게시글 가격과의 차이를 상대방에게 설명받는 것이 좋습니다."], "confirm_questions": ["배터리 성능은 정확히 어떻게 되나요?", "계좌번호와 연락처를 다시 한번 확인해 주실 수 있나요?", "상세주소는 어디인가요?", "게시글 가격 31만원과 실제 합의 가격 37만원 사이에 차이가 있는데, 이 부분에 대해 자세히 설명해 주실 수 있나요?"]}, "checklistItems": [{"id": "item", "label": "거래 품목명", "question": "아이패드 에어 5세대 64GB 맞으시죠?", "description": "정확한 품목 확인이 필요합니다. 잘못 기재되면 다른 제품을 받게 되어 분쟁이 발생할 수 있습니다.", "relatedMessages": [{"speaker": "me", "text": "안녕하세요 아이패드 에어 5세대 64gb 아직 판매하시나요", "highlight": "아이패드 에어 5세대 64gb"}, {"speaker": "other", "text": "네 아직 있어요! 게시글에는 31만원으로 올려뒀는데 가격 협상 가능해요"}]}, {"id": "price", "label": "가격", "question": "37만원이 최종 합의된 가격이 맞나요?", "description": "가격 차이가 발생하면 거래 후 환불이나 추가 비용 문제가 생길 수 있습니다. 최종 금액을 명확히 확인해야 합니다.", "relatedMessages": [{"speaker": "me", "text": "혹시 37만원에 안될까요? 배터리 성능이 궁금해서요", "highlight": "37만원"}, {"speaker": "other", "text": "네 좋아요 37만원에 드릴게요", "highlight": "37만원"}, {"speaker": "other", "text": "370,000원 준비해서 나올게요", "highlight": "370,000원"}]}, {"id": "location", "label": "거래 장소", "question": "개금역 1번 출구에서 뵙는 게 맞나요?", "description": "거래 장소가 명확하지 않으면 상대방이 다른 장소를 제안하거나 나타나지 않을 수 있습니다.", "relatedMessages": [{"speaker": "other", "text": "그럼 오늘 밤 10시 30분에 개금역 1번 출구에서 뵐게요", "highlight": "개금역 1번 출구"}, {"speaker": "me", "text": "저는 가야동 근처라 거기서 가까운 곳으로 정해봤어요", "highlight": "가야동"}]}, {"id": "datetime", "label": "거래 일시", "question": "오늘 밤 10시 30분에 뵙는 게 맞나요?", "description": "거래 시간이 명확하지 않으면 상대방이 다른 시간을 제안하거나 나타나지 않을 수 있습니다.", "relatedMessages": [{"speaker": "other", "text": "그럼 오늘 밤 10시 30분에 개금역 1번 출구에서 뵐게요", "highlight": "오늘 밤 10시 30분"}, {"speaker": "other", "text": "2026-01-28 에 뵈어요", "highlight": "2026-01-28"}]}, {"id": "payment", "label": "결제 방식", "question": "안심결제로 진행해도 괜찮을까요?", "description": "결제 방식이 명확하지 않으면 직거래 시 사기 위험이 증가할 수 있습니다.", "relatedMessages": [{"speaker": "me", "text": "안심결제로 진행해도 괜찮을까요?", "highlight": "안심결제"}, {"speaker": "other", "text": "제가 오늘 그쪽으로 갈테니까 직거래 가능하시려나요.. 제가 급전이 필요해서", "highlight": "직거래"}]}], "messages": [{"speaker": "me", "text": "안녕하세요 아이패드 에어 5세대 64gb 아직 판매하시나요"}, {"speaker": "other", "text": "네 아직 있어요! 게시글에는 31만원으로 올려뒀는데 가격 협상 가능해요"}, {"speaker": "me", "text": "혹시 37만원에 안될까요? 배터리 성능이 궁금해서요"}, {"speaker": "other", "text": "배터리는 확인 안해봐서 모르겠어요 ㅎㅎ"}, {"speaker": "me", "text": "아 그렇군요.. 그럼 37만원에 주시면 바로 살게요"}, {"speaker": "other", "text": "네 좋아요 37만원에 드릴게요"}, {"speaker": "me", "text": "안심결제로 진행해도 괜찮을까요?"}, {"speaker": "other", "text": "제가 오늘 그쪽으로 갈테니까 직거래 가능하시려나요.. 제가 급전이 필요해서"}, {"speaker": "me", "text": "아 네 가능합니다"}, {"speaker": "other", "text": "그럼 오늘 밤 10시 30분에 개금역 1번 출구에서 뵐게요"}, {"speaker": "me", "text": "좋아요! 혹시 택배도 되나요?"}, {"speaker": "me", "text": "계좌는 농협 [계좌번호] 이고 연락처는 [전화번호] 이에요"}, {"speaker": "other", "text": "넵 확인했습니다 2026-01-28 에 뵈어요"}, {"speaker": "me", "text": "저는 가야동 근처라 거기서 가까운 곳으로 정해봤어요"}, {"speaker": "other", "text": "네 좋습니다! 370,000원 준비해서 나올게요"}, {"speaker": "me", "text": "집주소는 [상세주소] 인데 참고만 하세요 직거래니까요"}], "card": {"card_summary": "직거래, 안심결제, 개금역 1번 출자, 26년 1월 28일 22시 30분", "card_title": "아이패드 에어 5세대 거래 주의사항", "one_line_warning": "급한 거래 주의, 가격 재확인, 연락처 및 주소 확인 필요"}, "meta": {"source": "text", "captures": 1, "speaker_mode": "explicit", "masked_counts": {"phone": 1, "account": 1, "address": 1}, "detected_price_candidates": [310000, 370000], "missing_required": [], "degraded": false, "timings_ms": {"transcript_ms": 0, "extract_ms": 13658, "validate_ms": 0, "judge_ms": 108344, "card_ms": 1174, "total_ms": 123176}}};
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function renderBubble(msg) {
+  const isMe = msg.speaker === "me";
+  let inner = esc(msg.text);
+  if (msg.highlight && msg.text.includes(msg.highlight)) {
+    const parts = msg.text.split(msg.highlight);
+    if (parts.length === 2) {
+      inner = `${esc(parts[0])}<mark>${esc(msg.highlight)}</mark>${esc(parts[1])}`;
+    }
+  }
+  return `<p class="bubble ${isMe ? "me" : "other"}">${inner}</p>`;
+}
+
+function row(label, value, opts = {}) {
+  const cls = ["receipt-row"];
+  if (opts.noDivider) cls.push("no-divider");
+  const valueCls = ["receipt-value"];
+  if (opts.muted) valueCls.push("muted");
+  return `<div class="${cls.join(" ")}"><span class="receipt-label">${esc(label)}</span><span class="${valueCls.join(" ")}">${esc(value)}</span></div>`;
+}
+
+function renderSummary() {
+  const r = DATA.result;
+  const n = DATA.checklistItems.length;
+  document.getElementById("summary-title").innerHTML = `확인이 필요한<br />${n}가지가 있어요`;
+  document.getElementById("summary-msgcount").textContent = DATA.messages.length;
+  document.getElementById("summary-alertsub").textContent =
+    `위험 신호 ${r.risk_signals.length}개 · 미확인 ${n}개`;
+
+  document.getElementById("summary-facts").innerHTML = [
+    row("물건", r.item, { noDivider: true }),
+    row("가격", `${r.final_price.toLocaleString()}원`),
+    row("장소", r.location ?? "-"),
+    row("시간", r.datetime ?? "-"),
+    row("거래 방식", r.delivery_method ?? "-"),
+  ].join("");
+
+  const riskWrap = document.getElementById("summary-risk-wrap");
+  if (r.risk_signals.length > 0) {
+    riskWrap.innerHTML = `
+      <div class="section-label">주의해서 볼 부분</div>
+      <div class="risk-box">
+        <div class="risk-head">🚨 거래를 서두르고 있어요</div>
+        <div class="risk-quote">"${esc(r.risk_signals[0])}"</div>
+        <div class="risk-note">${esc(r.risk_notes[0] ?? "")}</div>
+      </div>`;
+  }
+}
+
+function renderChecklist() {
+  const items = DATA.checklistItems;
+  document.getElementById("checklist-title").innerHTML = `이 ${items.length}가지만<br />물어보면 돼요`;
+  document.getElementById("progress-label").textContent = `0/${items.length} 확인했어요`;
+
+  const container = document.getElementById("checklist-items");
+  container.innerHTML = items.map(item => {
+    const relMsgs = item.relatedMessages.map(renderBubble).join("");
+    const whyBlock = item.relatedMessages.length > 0
+      ? `<details class="why"><summary class="why-sum">왜 이걸 물어봐야 하나요? ›</summary><div class="chat">${relMsgs}</div></details>`
+      : "";
+    return `
+      <div class="checklist-item" data-id="${esc(item.id)}">
+        <div class="checklist-label">${esc(item.label)}</div>
+        <div class="checklist-question">"${esc(item.question)}"</div>
+        <div class="checklist-desc">${esc(item.description)}</div>
+        <div class="btn-row">
+          <button class="copy-btn" onclick="navigator.clipboard && navigator.clipboard.writeText('${esc(item.question).replace(/'/g, "\\'")}')">복사</button>
+          <button class="check-btn" onclick="toggleCheck(this)">
+            <span class="check-dot"></span><span class="check-text">확인하기</span>
+          </button>
+        </div>
+        ${whyBlock}
+      </div>`;
+  }).join("");
+}
+
+function toggleCheck(btn) {
+  btn.classList.toggle("checked");
+  btn.querySelector(".check-text").textContent = btn.classList.contains("checked") ? "확인했어요" : "확인하기";
+  btn.querySelector(".check-dot").textContent = btn.classList.contains("checked") ? "✓" : "";
+  const total = document.querySelectorAll(".checklist-item").length;
+  const checked = document.querySelectorAll(".check-btn.checked").length;
+  document.getElementById("progress-fill").style.width = `${total ? (checked / total) * 100 : 0}%`;
+  document.getElementById("progress-label").textContent = `${checked}/${total} 확인했어요`;
+}
+
+function renderCard() {
+  const r = DATA.result;
+  const hasAccessories = r.accessories.length > 0;
+  document.getElementById("card-item").textContent = r.item;
+  document.getElementById("card-price").textContent = `${r.final_price.toLocaleString()}원`;
+  document.getElementById("card-body").innerHTML = [
+    row("장소", r.location ?? "-", { noDivider: true }),
+    row("시간", r.datetime ?? "-"),
+    row("거래 방식", r.delivery_method ?? "-"),
+    row("결제", r.payment_method ?? "미정"),
+    row("배터리", r.condition_info ?? "-"),
+    row("하자 시", r.refund_policy ?? "-"),
+    row("구성품", hasAccessories ? r.accessories.join(", ") : "언급 없음", { muted: !hasAccessories }),
+  ].join("");
+
+  const now = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  document.getElementById("card-issued").textContent =
+    `${now.getFullYear()}.${pad(now.getMonth()+1)}.${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+  if (!hasAccessories) {
+    document.getElementById("card-accessory-warn").innerHTML =
+      `<div class="accessory-warn">구성품은 아직 정해지지 않았어요. 만나기 전에 한 번 더 확인해보세요.</div>`;
+  }
+
+  if (DATA.card) {
+    document.getElementById("card-solar-note").innerHTML = `
+      <div class="card-note-box">
+        <div class="card-note-title">${esc(DATA.card.card_title)}</div>
+        <div>${esc(DATA.card.card_summary)}</div>
+        <div class="card-note-warn">⚠️ ${esc(DATA.card.one_line_warning)}</div>
+      </div>`;
+  }
+
+  document.getElementById("meta-box").textContent =
+    "meta = " + JSON.stringify(DATA.meta, null, 2);
+}
+
+function switchTab(name) {
+  document.querySelectorAll(".tabbar button").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("active", s.id === `screen-${name}`));
+}
+
+document.querySelectorAll(".tabbar button").forEach(b => {
+  b.addEventListener("click", () => switchTab(b.dataset.tab));
+});
+
+renderSummary();
+renderChecklist();
+renderCard();
+</script>
+</body>
+</html>
