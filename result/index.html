@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>약속지킴이 — 실제 연동 데모</title>
+<style>
+  :root {
+    --color-bg: #f2f4f6;
+    --color-surface: #ffffff;
+    --color-ink: #191f28;
+    --color-text-secondary: #4e5968;
+    --color-text-tertiary: #8b95a1;
+    --color-border: #e5e8eb;
+    --color-border-soft: #f4f6f8;
+
+    --color-primary: #3182f6;
+    --color-primary-active: #1b64da;
+    --color-primary-soft-bg: #e8f3ff;
+
+    --color-confirmed: #00c471;
+    --color-confirmed-text: #00a660;
+    --color-confirmed-bg: #e6f9f0;
+
+    --color-warning-bg-soft: #fffbf0;
+    --color-warning-bg: #fff4e5;
+    --color-warning-text: #8a6a20;
+    --color-warning-text-2: #8a5a00;
+
+    --color-danger: #f04452;
+    --color-danger-bg: #fff0f1;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #dfe3e8;
+    color: var(--color-ink);
+    letter-spacing: -0.02em;
+    font-family: "Pretendard", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 32px 12px;
+  }
+
+  .page { width: 100%; max-width: 420px; }
+
+  .devnote {
+    background: #191f28; color: #d6e9ff; font-size: 12.5px; line-height: 1.6;
+    padding: 12px 16px; border-radius: 12px; margin-bottom: 12px;
+  }
+  .devnote b { color: #fff; }
+  .devnote input {
+    width: 100%; margin-top: 6px; padding: 7px 10px; border-radius: 8px; border: 1px solid #33404f;
+    background: #10151c; color: #d6e9ff; font-size: 12.5px; font-family: inherit;
+  }
+
+  .phone {
+    background: var(--color-bg); border-radius: 26px; overflow: hidden; min-height: 640px;
+    box-shadow: 0 12px 40px rgba(25,31,40,.18); position: relative;
+  }
+  .screen { display: none; padding: 4px 20px 34px; }
+  .screen.active { display: block; }
+
+  .navheader { display: flex; align-items: center; gap: 8px; height: 52px; font-size: 15px; font-weight: 600; }
+  .navheader .back {
+    flex: none; width: 36px; height: 36px; border-radius: 10px; border: 0; background: transparent;
+    font-size: 15px; cursor: pointer; display: grid; place-items: center;
+  }
+  .navheader .back:hover { background: var(--color-border); }
+
+  h1.title { margin: 4px 0 8px; font-size: 24px; font-weight: 700; line-height: 1.38; letter-spacing: -0.03em; }
+  p.subtitle { margin: 0 0 24px; font-size: 15px; line-height: 1.5; color: var(--color-text-secondary); }
+
+  .card { background: var(--color-surface); border-radius: 18px; padding: 20px; }
+  .card + .card { margin-top: 12px; }
+
+  .tabbar { display: flex; gap: 6px; background: #e9ecef; padding: 4px; border-radius: 12px; margin-bottom: 18px; }
+  .tabbar button {
+    flex: 1; height: 38px; border: 0; border-radius: 9px; background: transparent;
+    color: var(--color-text-tertiary); font-weight: 600; font-size: 13.5px; letter-spacing: -0.02em; cursor: pointer;
+  }
+  .tabbar button.active { background: var(--color-surface); color: var(--color-ink); box-shadow: 0 1px 3px rgba(25,31,40,.1); }
+
+  .dropzone {
+    border: 1.5px dashed #c6d3e2; background: var(--color-surface); border-radius: 18px;
+    padding: 34px 20px; text-align: center; cursor: pointer;
+  }
+  .dropzone .icon { width: 54px; height: 54px; margin: 0 auto 14px; border-radius: 16px; background: var(--color-primary-soft-bg); display: grid; place-items: center; font-size: 24px; }
+  .dropzone .headline { font-size: 15.5px; font-weight: 700; margin-bottom: 5px; }
+  .dropzone .sub { font-size: 13px; color: var(--color-text-tertiary); }
+
+  .filelist { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .filerow { display: flex; align-items: center; gap: 11px; background: var(--color-surface); border-radius: 14px; padding: 10px; }
+  .filerow .thumb { flex: none; width: 38px; height: 48px; border-radius: 7px; background: var(--color-bg); display: grid; place-items: center; font-size: 16px; }
+  .filerow .name { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .filerow .size { font-size: 12px; color: var(--color-text-tertiary); margin-top: 2px; }
+  .filerow .remove { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 0; background: var(--color-bg); cursor: pointer; font-size: 12px; color: var(--color-text-tertiary); }
+
+  textarea.pastebox {
+    width: 100%; min-height: 190px; resize: none; border: 0; border-radius: 18px; background: var(--color-surface);
+    padding: 18px; font-size: 14.5px; line-height: 1.7; letter-spacing: -0.02em; color: var(--color-ink); font-family: inherit;
+  }
+  textarea.pastebox::placeholder { color: var(--color-text-tertiary); }
+
+  .tip-box { margin-top: 12px; background: var(--color-warning-bg-soft); border-radius: 14px; padding: 14px 16px; font-size: 13px; font-weight: 500; line-height: 1.6; color: var(--color-warning-text); }
+  .privacy-box { margin-top: 14px; display: flex; gap: 8px; background: var(--color-bg); border-radius: 14px; padding: 13px 15px; font-size: 12.5px; font-weight: 500; line-height: 1.6; color: var(--color-text-tertiary); }
+
+  .error-box { margin-top: 12px; background: var(--color-danger-bg); border-radius: 14px; padding: 14px 16px; font-size: 13px; font-weight: 500; line-height: 1.55; color: var(--color-danger); }
+
+  .bottombar { padding: 16px 20px 22px; background: linear-gradient(180deg, rgba(242,244,246,0), var(--color-bg) 28%); }
+  button.btn {
+    height: 54px; width: 100%; border-radius: 14px; font-size: 16.5px; font-weight: 700; letter-spacing: -0.02em;
+    border: 0; background: var(--color-primary); color: #fff; cursor: pointer;
+  }
+  button.btn:disabled { opacity: .4; cursor: default; }
+  button.btn.outline { background: var(--color-surface); color: var(--color-text-secondary); border: 1px solid var(--color-border); }
+  .btnrow { display: flex; gap: 8px; }
+  .btnrow > * { flex: 1; }
+
+  .alert-card { display: flex; align-items: center; gap: 14px; }
+  .alert-icon { flex: none; width: 46px; height: 46px; border-radius: 50%; background: var(--color-warning-bg); display: grid; place-items: center; font-size: 22px; }
+  .alert-title { font-size: 17px; font-weight: 700; margin-bottom: 2px; }
+  .alert-sub { font-size: 13px; color: var(--color-text-tertiary); }
+
+  .section-label { margin: 24px 0 10px; font-size: 13px; font-weight: 600; color: var(--color-text-tertiary); }
+
+  .receipt-row { display: flex; justify-content: space-between; gap: 16px; padding: 11px 0; border-top: 1px solid var(--color-border-soft); align-items: flex-start; }
+  .receipt-row.no-divider { border-top: 0; }
+  .receipt-label { flex: none; font-size: 14px; color: var(--color-text-tertiary); }
+  .receipt-value { text-align: right; font-size: 15px; line-height: 1.4; font-weight: 600; color: var(--color-ink); }
+  .receipt-value.muted { font-weight: 500; color: var(--color-text-tertiary); }
+
+  .risk-box { background: var(--color-danger-bg); border-radius: 18px; padding: 18px 20px; }
+  .risk-head { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700; color: var(--color-danger); margin-bottom: 7px; }
+  .risk-quote { font-size: 15px; font-weight: 600; line-height: 1.5; margin-bottom: 6px; }
+  .risk-note { font-size: 13px; line-height: 1.55; color: var(--color-text-secondary); }
+
+  .progress-track { height: 6px; border-radius: 999px; background: var(--color-border); overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 999px; background: var(--color-confirmed); width: 0%; transition: width .3s ease-out; }
+  .progress-label { margin-top: 9px; font-size: 13px; font-weight: 500; color: var(--color-text-tertiary); }
+
+  .checklist-item { background: var(--color-surface); border-radius: 18px; padding: 22px 20px; margin-top: 12px; }
+  .checklist-item:first-child { margin-top: 22px; }
+  .checklist-label { font-size: 12px; font-weight: 700; color: var(--color-primary); margin-bottom: 9px; }
+  .checklist-question { font-size: 19px; font-weight: 700; line-height: 1.45; letter-spacing: -0.03em; margin-bottom: 9px; }
+  .checklist-desc { font-size: 13.5px; line-height: 1.55; color: var(--color-text-tertiary); margin-bottom: 14px; }
+
+  .btn-row { display: flex; align-items: center; gap: 8px; }
+  .copy-btn, .check-btn {
+    height: 44px; border-radius: 12px; font-size: 14px; font-weight: 600;
+    letter-spacing: -0.02em; border: 1px solid var(--color-border); background: var(--color-surface);
+    color: var(--color-text-secondary); padding: 0 14px; cursor: pointer;
+  }
+  .check-btn { display: flex; align-items: center; gap: 7px; border-color: #d1d6db; }
+  .check-btn.checked { border-color: var(--color-confirmed); background: var(--color-confirmed-bg); color: var(--color-confirmed-text); }
+  .check-dot { width: 19px; height: 19px; border-radius: 50%; border: 1.5px solid #c6cdd4; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #fff; }
+  .check-btn.checked .check-dot { border-color: var(--color-confirmed); background: var(--color-confirmed); }
+
+  details.why { margin-top: 14px; border-top: 1px solid var(--color-border-soft); padding-top: 14px; }
+  summary.why-sum { font-size: 13px; font-weight: 600; color: var(--color-text-tertiary); cursor: pointer; }
+  .chat { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .bubble { max-width: 82%; border-radius: 14px; padding: 10px 13px; font-size: 13.5px; line-height: 1.5; }
+  .bubble.me { align-self: flex-end; border-bottom-right-radius: 5px; background: var(--color-primary); color: #fff; }
+  .bubble.other { align-self: flex-start; border-bottom-left-radius: 5px; background: var(--color-bg); color: var(--color-ink); }
+  .bubble mark { background: #ffe8a3; border-radius: 3px; padding: 1px 2px; color: inherit; }
+
+  .promise-card { background: var(--color-surface); border-radius: 22px; overflow: hidden; box-shadow: 0 6px 24px rgba(25,31,40,.07); }
+  .promise-head { padding: 24px 22px 20px; color: #fff; background: linear-gradient(135deg, #3182F6, #1B64DA); }
+  .promise-kicker { font-size: 12px; font-weight: 700; letter-spacing: .02em; opacity: .85; margin-bottom: 12px; }
+  .promise-item { font-size: 20px; font-weight: 700; line-height: 1.35; margin-bottom: 4px; }
+  .promise-price { font-size: 26px; font-weight: 800; letter-spacing: -0.04em; }
+  .promise-body { padding: 6px 22px 20px; }
+  .promise-footer { margin: 0 22px; display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--color-border); padding: 16px 0 22px; }
+  .confirmed-tag { display: flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; color: var(--color-confirmed-text); }
+  .issued-at { font-size: 12px; color: var(--color-text-tertiary); }
+
+  .accessory-warn { margin-top: 12px; background: var(--color-warning-bg); border-radius: 14px; padding: 14px 16px; font-size: 13px; line-height: 1.55; color: var(--color-warning-text-2); }
+  .card-note-box { margin-top: 12px; background: var(--color-warning-bg-soft); border-radius: 14px; padding: 14px 16px; }
+  .card-note-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .card-note-warn { font-size: 13px; color: var(--color-warning-text); line-height: 1.55; }
+
+  .spinner-overlay {
+    position: absolute; inset: 0; background: rgba(242,244,246,.85); display: none;
+    flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 5; border-radius: 26px;
+  }
+  .spinner-overlay.active { display: flex; }
+  .spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--color-border); border-top-color: var(--color-primary); animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner-label { font-size: 13.5px; font-weight: 600; color: var(--color-text-secondary); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="devnote">
+    ⚙️ 이 페이지는 <b>frontend/ 파일을 전혀 수정하지 않고</b> 프론트 디자인만 복사해 만든
+    독립 데모입니다. 실제로 입력하면 아래 백엔드 API로 fetch를 보내 진짜 파이프라인 결과를
+    받아옵니다. 먼저 <code>cd backend && python app.py</code>로 서버를 띄우세요.
+    <input id="api-base" value="http://localhost:5000" />
+  </div>
+
+  <div class="phone">
+    <div class="spinner-overlay" id="spinner">
+      <div class="spinner"></div>
+      <div class="spinner-label">대화를 분석하고 있어요…</div>
+    </div>
+
+    <section id="screen-upload" class="screen active">
+      <div class="navheader"><span>&nbsp;</span></div>
+      <h1 class="title">거래 대화를<br />올려주세요</h1>
+      <p class="subtitle">빠진 약속이 없는지 확인해드릴게요.</p>
+
+      <div class="tabbar">
+        <button data-utab="cap" class="active">캡처 올리기</button>
+        <button data-utab="txt">텍스트 붙여넣기</button>
+      </div>
+
+      <div id="utab-cap">
+        <div class="dropzone" id="dropzone">
+          <div class="icon">🖼️</div>
+          <div class="headline">캡처를 여기에 놓거나 탭하세요</div>
+          <div class="sub">여러 장을 한 번에 올릴 수 있어요 (최대 5장)</div>
+          <input id="file-input" type="file" accept="image/*" multiple style="display:none" />
+        </div>
+        <div class="filelist" id="filelist"></div>
+        <div class="tip-box">💡 가격·장소·시간이 오간 부분을 모두 올려주세요. 일부만 올리면 정해진 약속을 놓칠 수 있어요.</div>
+      </div>
+
+      <div id="utab-txt" style="display:none">
+        <textarea class="pastebox" id="pastebox" placeholder="대화 내용을 그대로 붙여넣으세요.&#10;(나: / 상대방: 을 앞에 붙이면 더 정확해요)"></textarea>
+        <div class="tip-box">💡 캡처가 잘 안 읽힐 때 쓰면 좋아요.</div>
+      </div>
+
+      <div id="upload-error"></div>
+
+      <div class="bottombar">
+        <button class="btn" id="submit-btn">분석 시작하기</button>
+      </div>
+    </section>
+
+    <section id="screen-summary" class="screen">
+      <div class="navheader">
+        <button class="back" data-back="upload">←</button>
+        <span>거래 분석 결과</span>
+      </div>
+      <h1 class="title" id="summary-title"></h1>
+      <p class="subtitle">대화 <span id="summary-msgcount"></span>개를 읽고 정리했어요.</p>
+
+      <div class="card alert-card">
+        <div class="alert-icon">⚠️</div>
+        <div>
+          <div class="alert-title">주의가 필요한 거래예요</div>
+          <div class="alert-sub" id="summary-alertsub"></div>
+        </div>
+      </div>
+
+      <div class="section-label">정해진 약속</div>
+      <div class="card" id="summary-facts"></div>
+
+      <div id="summary-risk-wrap"></div>
+
+      <div class="bottombar">
+        <button class="btn" data-next="checklist" id="summary-next-btn"></button>
+      </div>
+    </section>
+
+    <section id="screen-checklist" class="screen">
+      <div class="navheader">
+        <button class="back" data-back="summary">←</button>
+        <span>확인 체크리스트</span>
+      </div>
+      <h1 class="title" id="checklist-title"></h1>
+      <p class="subtitle">복사해서 그대로 보내세요.</p>
+
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="progress-label" id="progress-label"></div>
+
+      <div id="checklist-items"></div>
+
+      <div class="bottombar">
+        <button class="btn" data-next="card">약속 카드 만들기</button>
+      </div>
+    </section>
+
+    <section id="screen-card" class="screen">
+      <div class="navheader">
+        <button class="back" data-back="checklist">←</button>
+        <span>약속 카드</span>
+      </div>
+      <h1 class="title">약속이<br />정리됐어요</h1>
+      <p class="subtitle">거래 전에 서로 한 번씩 확인해보세요.</p>
+
+      <div class="promise-card">
+        <div class="promise-head">
+          <div class="promise-kicker">PROMISE CARD</div>
+          <div class="promise-item" id="card-item"></div>
+          <div class="promise-price" id="card-price"></div>
+        </div>
+        <div class="promise-body" id="card-body"></div>
+        <div class="promise-footer">
+          <span class="confirmed-tag">✓ 양쪽 확인 완료</span>
+          <span class="issued-at" id="card-issued"></span>
+        </div>
+      </div>
+
+      <div id="card-accessory-warn"></div>
+      <div id="card-solar-note"></div>
+
+      <div class="bottombar">
+        <div class="btnrow">
+          <button class="btn outline" data-back="upload">새로 분석하기</button>
+          <button class="btn" id="card-restart-btn2" data-back="upload">다시 만들기</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+let uploadedFiles = []; // {id, file, name, sizeLabel}
+let currentUTab = "cap";
+let DATA = null; // 서버 응답: {result, checklistItems, messages, card, meta}
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function formatSize(bytes) {
+  const mb = bytes / (1024 * 1024);
+  if (mb >= 0.1) return `${mb.toFixed(1)}MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))}KB`;
+}
+function apiBase() {
+  return document.getElementById("api-base").value.replace(/\/$/, "");
+}
+
+// ---------- 업로드 화면 ----------
+document.querySelectorAll("[data-utab]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    currentUTab = btn.dataset.utab;
+    document.querySelectorAll("[data-utab]").forEach(b => b.classList.toggle("active", b === btn));
+    document.getElementById("utab-cap").style.display = currentUTab === "cap" ? "" : "none";
+    document.getElementById("utab-txt").style.display = currentUTab === "txt" ? "" : "none";
+  });
+});
+
+document.getElementById("dropzone").addEventListener("click", () => document.getElementById("file-input").click());
+document.getElementById("file-input").addEventListener("change", (e) => addFiles(e.target.files));
+document.getElementById("dropzone").addEventListener("dragover", (e) => e.preventDefault());
+document.getElementById("dropzone").addEventListener("drop", (e) => {
+  e.preventDefault();
+  addFiles(e.dataTransfer.files);
+});
+
+function addFiles(fileList) {
+  Array.from(fileList || []).forEach((file, i) => {
+    uploadedFiles.push({ id: `${file.name}-${Date.now()}-${i}`, file, name: file.name, sizeLabel: formatSize(file.size) });
+  });
+  renderFileList();
+}
+function removeFile(id) {
+  uploadedFiles = uploadedFiles.filter(f => f.id !== id);
+  renderFileList();
+}
+function renderFileList() {
+  document.getElementById("filelist").innerHTML = uploadedFiles.map(f => `
+    <div class="filerow">
+      <div class="thumb">🖼️</div>
+      <div style="flex:1;min-width:0">
+        <div class="name">${esc(f.name)}</div>
+        <div class="size">${esc(f.sizeLabel)}</div>
+      </div>
+      <button class="remove" onclick="removeFile('${f.id}')">✕</button>
+    </div>`).join("");
+}
+
+document.getElementById("submit-btn").addEventListener("click", handleSubmit);
+
+async function handleSubmit() {
+  const errorBox = document.getElementById("upload-error");
+  errorBox.innerHTML = "";
+
+  let fetchOpts;
+  if (currentUTab === "cap") {
+    if (uploadedFiles.length === 0) {
+      errorBox.innerHTML = `<div class="error-box">캡처를 올리거나 대화 내용을 붙여넣어주세요.</div>`;
+      return;
+    }
+    const formData = new FormData();
+    uploadedFiles.forEach(f => formData.append("images", f.file));
+    fetchOpts = { method: "POST", body: formData };
+  } else {
+    const text = document.getElementById("pastebox").value.trim();
+    if (text.length < 10) {
+      errorBox.innerHTML = `<div class="error-box">대화 내용을 붙여넣어주세요.</div>`;
+      return;
+    }
+    fetchOpts = {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ raw_text: text }),
+    };
+  }
+
+  setLoading(true);
+  try {
+    const res = await fetch(`${apiBase()}/api/analyze`, fetchOpts);
+    const body = await res.json();
+    if (!body.ok || !body.data) {
+      errorBox.innerHTML = `<div class="error-box">${esc(body.error || "분석 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.")}</div>`;
+      return;
+    }
+    DATA = body.data;
+    renderSummary();
+    renderChecklist();
+    renderCard();
+    switchScreen("summary");
+  } catch (err) {
+    errorBox.innerHTML = `<div class="error-box">백엔드(${esc(apiBase())})에 연결하지 못했어요. 서버가 켜져 있는지, 주소가 맞는지 확인해주세요.<br><span style="opacity:.7">${esc(String(err))}</span></div>`;
+  } finally {
+    setLoading(false);
+  }
+}
+
+function setLoading(loading) {
+  document.getElementById("spinner").classList.toggle("active", loading);
+  document.getElementById("submit-btn").disabled = loading;
+  document.getElementById("submit-btn").textContent = loading ? "분석 중…" : "분석 시작하기";
+}
+
+// ---------- 화면 전환 ----------
+const STEP_ORDER = ["upload", "summary", "checklist", "card"];
+function switchScreen(name) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("active", s.id === `screen-${name}`));
+}
+document.querySelectorAll("[data-back]").forEach(btn => {
+  btn.addEventListener("click", () => switchScreen(btn.dataset.back));
+});
+document.querySelectorAll("[data-next]").forEach(btn => {
+  btn.addEventListener("click", () => switchScreen(btn.dataset.next));
+});
+
+// ---------- 결과 렌더링 (실제 서버 응답을 그대로 사용) ----------
+function renderBubble(msg) {
+  const isMe = msg.speaker === "me";
+  let inner = esc(msg.text);
+  if (msg.highlight && msg.text.includes(msg.highlight)) {
+    const parts = msg.text.split(msg.highlight);
+    if (parts.length === 2) inner = `${esc(parts[0])}<mark>${esc(msg.highlight)}</mark>${esc(parts[1])}`;
+  }
+  return `<p class="bubble ${isMe ? "me" : "other"}">${inner}</p>`;
+}
+function row(label, value, opts = {}) {
+  const cls = ["receipt-row"]; if (opts.noDivider) cls.push("no-divider");
+  const valueCls = ["receipt-value"]; if (opts.muted) valueCls.push("muted");
+  return `<div class="${cls.join(" ")}"><span class="receipt-label">${esc(label)}</span><span class="${valueCls.join(" ")}">${esc(value)}</span></div>`;
+}
+
+function renderSummary() {
+  const r = DATA.result;
+  const n = DATA.checklistItems.length;
+  document.getElementById("summary-title").innerHTML = `확인이 필요한<br />${n}가지가 있어요`;
+  document.getElementById("summary-msgcount").textContent = DATA.messages.length;
+  document.getElementById("summary-alertsub").textContent = `위험 신호 ${r.risk_signals.length}개 · 미확인 ${n}개`;
+  document.getElementById("summary-facts").innerHTML = [
+    row("물건", r.item, { noDivider: true }),
+    row("가격", `${r.final_price.toLocaleString()}원`),
+    row("장소", r.location ?? "-"),
+    row("시간", r.datetime ?? "-"),
+    row("거래 방식", r.delivery_method ?? "-"),
+  ].join("");
+  const riskWrap = document.getElementById("summary-risk-wrap");
+  riskWrap.innerHTML = r.risk_signals.length > 0 ? `
+      <div class="section-label">주의해서 볼 부분</div>
+      <div class="risk-box">
+        <div class="risk-head">🚨 거래를 서두르고 있어요</div>
+        <div class="risk-quote">"${esc(r.risk_signals[0])}"</div>
+        <div class="risk-note">${esc(r.risk_notes[0] ?? "")}</div>
+      </div>` : "";
+  document.getElementById("summary-next-btn").textContent = `확인할 ${n}가지 보기`;
+}
+
+function toggleCheck(btn) {
+  btn.classList.toggle("checked");
+  btn.querySelector(".check-text").textContent = btn.classList.contains("checked") ? "확인했어요" : "확인하기";
+  btn.querySelector(".check-dot").textContent = btn.classList.contains("checked") ? "✓" : "";
+  const total = document.querySelectorAll(".checklist-item").length;
+  const checked = document.querySelectorAll(".check-btn.checked").length;
+  document.getElementById("progress-fill").style.width = `${total ? (checked / total) * 100 : 0}%`;
+  document.getElementById("progress-label").textContent = `${checked}/${total} 확인했어요`;
+}
+
+function renderChecklist() {
+  const items = DATA.checklistItems;
+  document.getElementById("checklist-title").innerHTML = `이 ${items.length}가지만<br />물어보면 돼요`;
+  document.getElementById("progress-label").textContent = `0/${items.length} 확인했어요`;
+  document.getElementById("progress-fill").style.width = "0%";
+  document.getElementById("checklist-items").innerHTML = items.map(item => {
+    const relMsgs = item.relatedMessages.map(renderBubble).join("");
+    const whyBlock = item.relatedMessages.length > 0
+      ? `<details class="why"><summary class="why-sum">왜 이걸 물어봐야 하나요? ›</summary><div class="chat">${relMsgs}</div></details>` : "";
+    return `
+      <div class="checklist-item">
+        <div class="checklist-label">${esc(item.label)}</div>
+        <div class="checklist-question">"${esc(item.question)}"</div>
+        <div class="checklist-desc">${esc(item.description)}</div>
+        <div class="btn-row">
+          <button class="copy-btn" onclick="navigator.clipboard && navigator.clipboard.writeText('${esc(item.question).replace(/'/g, "\\'")}')">복사</button>
+          <button class="check-btn" onclick="toggleCheck(this)"><span class="check-dot"></span><span class="check-text">확인하기</span></button>
+        </div>
+        ${whyBlock}
+      </div>`;
+  }).join("");
+}
+
+function renderCard() {
+  const r = DATA.result;
+  const hasAccessories = r.accessories.length > 0;
+  document.getElementById("card-item").textContent = r.item;
+  document.getElementById("card-price").textContent = `${r.final_price.toLocaleString()}원`;
+  document.getElementById("card-body").innerHTML = [
+    row("장소", r.location ?? "-", { noDivider: true }),
+    row("시간", r.datetime ?? "-"),
+    row("거래 방식", r.delivery_method ?? "-"),
+    row("결제", r.payment_method ?? "미정"),
+    row("배터리", r.condition_info ?? "-"),
+    row("하자 시", r.refund_policy ?? "-"),
+    row("구성품", hasAccessories ? r.accessories.join(", ") : "언급 없음", { muted: !hasAccessories }),
+  ].join("");
+  const now = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  document.getElementById("card-issued").textContent = `${now.getFullYear()}.${pad(now.getMonth()+1)}.${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  document.getElementById("card-accessory-warn").innerHTML = !hasAccessories
+    ? `<div class="accessory-warn">구성품은 아직 정해지지 않았어요. 만나기 전에 한 번 더 확인해보세요.</div>` : "";
+  document.getElementById("card-solar-note").innerHTML = DATA.card ? `
+      <div class="card-note-box">
+        <div class="card-note-title">${esc(DATA.card.card_title)}</div>
+        <div>${esc(DATA.card.card_summary)}</div>
+        <div class="card-note-warn">⚠️ ${esc(DATA.card.one_line_warning)}</div>
+      </div>` : "";
+}
+</script>
+</body>
+</html>

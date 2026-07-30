@@ -8,7 +8,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from pipeline import judge, masking, postprocess, text_input, validate  # noqa: E402
+from pipeline import extract, judge, masking, postprocess, text_input, validate  # noqa: E402
 
 FAILURES = []
 FIXTURE_PATH = os.path.join(os.path.dirname(__file__), "fixtures", "ipad_chat.txt")
@@ -298,6 +298,22 @@ def test_elements_to_messages_noise_and_timestamp():
     check("timestamp stripped from remaining message", "3:12" not in messages[0]["text"], str(messages))
 
 
+def test_extract_normalize_rejects_null_like_strings():
+    raw = {
+        "item": "null", "final_price": "5.5만원", "location": "None",
+        "datetime": "n/a", "delivery_method": "직거래", "payment_method": None,
+        "refund_policy": "", "condition_info": "unknown",
+        "accessories": [], "risk_signals": [],
+    }
+    result = extract._normalize(raw)
+    check("literal 'null' string treated as empty item", result["item"] == "", str(result))
+    check("literal 'None' string treated as null location", result["location"] is None, str(result))
+    check("literal 'n/a' string treated as null datetime", result["datetime"] is None, str(result))
+    check("literal 'unknown' string treated as null condition_info", result["condition_info"] is None, str(result))
+    check("real value kept", result["delivery_method"] == "직거래", str(result))
+    check("price parsed from '5.5만원'", result["final_price"] == 55000, str(result))
+
+
 def test_build_fallback_judgement():
     extract_result = {
         "item": "아이패드", "final_price": 370000, "location": None, "datetime": None,
@@ -331,6 +347,7 @@ if __name__ == "__main__":
     test_validate_price_conflict_detection()
     test_validate_no_false_conflict_for_negotiation()
     test_validate_required_fields()
+    test_extract_normalize_rejects_null_like_strings()
     test_sanitize_checklist_removes_hallucinated_message()
     test_sanitize_checklist_drops_bad_highlight()
     test_sanitize_checklist_dedupes_ids()

@@ -27,8 +27,10 @@ JUDGE_SYSTEM_PROMPT = "\n".join([
     "8. checklistItems는 3~5개로, question은 confirm_questions 중 대응되는 "
     "것과 맞추고, description은 '왜 중요한지 + 확인 안 하면 어떤 문제가 "
     "생기는지'를 2문장 이내 존댓말로 설명하라.",
-    "9. item/final_price 등 10개 수집 필드도 함께 출력하되, [수집된 정보]가 "
-    "대화록과 다르다고 판단되면 대화록 근거로 다시 판단해 값을 수정하라.",
+    "9. item/final_price 등 [수집된 정보]의 10개 필드는 절대 다시 출력하지 "
+    "마라 — 이미 확정된 값이며 그대로 최종 결과에 병합된다. 네가 낼 값은 "
+    "conflicts/missing_items/risk_notes/confirm_questions/checklistItems "
+    "다섯 개뿐이다. 값이 의심스러우면 다시 쓰지 말고 conflicts에 지적하라.",
     "10. 대화록에 [전화번호], [계좌번호], [상세주소] 같은 마스킹 토큰이 "
     "보이면 그 정보는 이미 대화에서 교환된 것으로 간주하라. 실제 값을 알 수 "
     "없다는 이유로 missing_items나 confirm_questions에 다시 물어보라고 넣지 "
@@ -165,5 +167,9 @@ def judge(transcript, extract, validation, messages, speaker_mode):
         stage="judge", schema=schemas.JUDGE_SCHEMA,
         temperature=0.2, max_tokens=3000, timeout=120,
     )
-    raw["checklistItems"] = sanitize_checklist(raw.get("checklistItems"), messages)
-    return raw
+    # extract의 10개 필드는 파이썬에서 그대로 병합한다 — Solar가 다시 쓰게
+    # 하면 스키마상 item이 non-null 문자열이라 모를 때 엉뚱한 값을 지어내는
+    # 것이 실측으로 확인됨(§JUDGE_SCHEMA 주석 참조).
+    judgement = {**extract, **raw}
+    judgement["checklistItems"] = sanitize_checklist(raw.get("checklistItems"), messages)
+    return judgement

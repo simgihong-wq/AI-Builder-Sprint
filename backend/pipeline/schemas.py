@@ -137,7 +137,6 @@ CHECKLIST_ITEM_SCHEMA = {
 }
 
 JUDGE_PROPERTIES = {
-    **EXTRACT_PROPERTIES,
     "conflicts": {
         "type": "array",
         "items": {"type": "string"},
@@ -186,6 +185,11 @@ JUDGE_PROPERTIES = {
 
 JUDGE_REQUIRED = list(JUDGE_PROPERTIES.keys())
 
+# 의도적으로 EXTRACT_PROPERTIES를 포함하지 않는다. 실측으로, Solar에게 10개
+# 수집 필드를 다시 출력하도록 요구하면(스키마가 item을 non-null 문자열로
+# 강제하니) 대화에 없는 정보(예: 엉뚱한 상품명)를 지어내는 경우가 확인됨.
+# extract 필드는 judge.py에서 파이썬으로 그대로 병합하고, Solar는 판단
+# 필드(conflicts~checklistItems)만 채운다.
 JUDGE_SCHEMA = {
     "name": "promise_judgement",
     "schema": {

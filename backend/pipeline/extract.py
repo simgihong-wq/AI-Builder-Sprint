@@ -17,6 +17,20 @@ from . import schemas, upstage_client
 _MAN_RE = re.compile(r"(\d+(?:\.\d+)?)\s*만")
 _DIGITS_RE = re.compile(r"\d+")
 
+# Solar가 스키마상 non-null 문자열이 필요할 때(예: item) 값을 모르면 JSON null
+# 대신 문자열 "null"을 그대로 넣는 경우가 실측으로 확인됨 — 화면에 "null"이
+# 그대로 노출되는 걸 막기 위해 빈 값으로 취급한다.
+_NULL_LIKE = {"null", "none", "n/a", "na", "unknown", "미상", "없음"}
+
+
+def _clean_str(value):
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text or text.lower() in _NULL_LIKE:
+        return None
+    return text
+
 EXTRACT_SYSTEM_PROMPT = (
     "너는 중고거래 채팅 대화록에서 값을 있는 그대로 수집하는 역할이다. "
     "충돌 여부나 합의 여부에 대한 판단은 하지 마라 — 그건 다른 단계에서 한다. "
@@ -56,13 +70,12 @@ def _normalize_price(value):
 
 def _normalize(raw):
     raw = raw if isinstance(raw, dict) else {}
-    result = {"item": str(raw.get("item") or "").strip()}
+    result = {"item": _clean_str(raw.get("item")) or ""}
     result["final_price"] = _normalize_price(raw.get("final_price"))
 
     for key in ("location", "datetime", "delivery_method", "payment_method",
                 "refund_policy", "condition_info"):
-        value = raw.get(key)
-        result[key] = value.strip() if isinstance(value, str) and value.strip() else None
+        result[key] = _clean_str(raw.get(key))
 
     for key in ("accessories", "risk_signals"):
         value = raw.get(key)
