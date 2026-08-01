@@ -13,7 +13,14 @@ function App() {
   const [step, setStep] = useState<Step>("upload");
   const [analyzedData, setAnalyzedData] = useState<AnalyzedData | null>(null);
 
+  const hasChecklist = (analyzedData?.checklistItems.length ?? 0) > 0;
+
   const goBack = () => {
+    if (step === "card" && !hasChecklist) {
+      // 체크리스트가 비어 있어 요약에서 카드로 바로 건너뛴 경우, 뒤로가기도 요약으로
+      setStep("summary");
+      return;
+    }
     const index = STEP_ORDER.indexOf(step);
     if (index > 0) setStep(STEP_ORDER[index - 1]);
   };
@@ -35,7 +42,7 @@ function App() {
           result={analyzedData!.result}
           checklistItems={analyzedData!.checklistItems}
           onBack={goBack}
-          onNext={() => setStep("checklist")}
+          onNext={() => setStep(hasChecklist ? "checklist" : "card")}
         />
       );
     case "checklist":

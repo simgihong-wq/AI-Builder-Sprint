@@ -26,9 +26,19 @@ export function ResultSummaryScreen({
 
         <div className="flex-1 px-5 pb-[120px] pt-1">
           <h1 className="mb-2 text-2xl font-bold leading-[1.38] tracking-[-0.03em] text-ink">
-            확인이 필요한
-            <br />
-            {checklistItems.length}가지가 있어요
+            {checklistItems.length > 0 ? (
+              <>
+                확인이 필요한
+                <br />
+                {checklistItems.length}가지가 있어요
+              </>
+            ) : (
+              <>
+                확인할 내용이
+                <br />
+                따로 없어요
+              </>
+            )}
           </h1>
           <p className="mb-6 text-[15px] leading-[1.5] text-text-secondary">
             대화 12개를 읽고 정리했어요.
@@ -87,7 +97,9 @@ export function ResultSummaryScreen({
 
         <BottomBar>
           <Button onClick={onNext}>
-            확인할 {checklistItems.length}가지 보기
+            {checklistItems.length > 0
+              ? `확인할 ${checklistItems.length}가지 보기`
+              : "약속 카드 보기"}
           </Button>
         </BottomBar>
       </div>

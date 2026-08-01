@@ -42,20 +42,32 @@ export function ChecklistScreen({
 
         <div className="flex-1 px-5 pb-[120px] pt-1">
           <h1 className="mb-2 text-2xl font-bold leading-[1.38] tracking-[-0.03em] text-ink">
-            이 {items.length}가지만
-            <br />
-            물어보면 돼요
+            {items.length > 0 ? (
+              <>
+                이 {items.length}가지만
+                <br />
+                물어보면 돼요
+              </>
+            ) : (
+              <>
+                확인할 내용이
+                <br />
+                따로 없어요
+              </>
+            )}
           </h1>
           <p className="mb-6 text-[15px] leading-[1.5] text-text-secondary">
             복사해서 그대로 보내세요.
           </p>
 
-          <div className="mb-[22px] mt-1">
-            <ProgressBar value={checked.size} max={items.length} />
-            <div className="mt-[9px] text-[13px] font-medium text-text-tertiary">
-              {checked.size}/{items.length} 확인했어요
+          {items.length > 0 && (
+            <div className="mb-[22px] mt-1">
+              <ProgressBar value={checked.size} max={items.length} />
+              <div className="mt-[9px] text-[13px] font-medium text-text-tertiary">
+                {checked.size}/{items.length} 확인했어요
+              </div>
             </div>
-          </div>
+          )}
 
           {items.map((item, index) => {
             const isChecked = checked.has(item.id);
