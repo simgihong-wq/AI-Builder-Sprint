@@ -35,6 +35,14 @@ JUDGE_SYSTEM_PROMPT = "\n".join([
     "보이면 그 정보는 이미 대화에서 교환된 것으로 간주하라. 실제 값을 알 수 "
     "없다는 이유로 missing_items나 confirm_questions에 다시 물어보라고 넣지 "
     "마라. 단, 그 정보 자체가 risk_signals와 관련된 경우는 예외로 다뤄도 된다.",
+    "11. missing_items를 판단할 때 다음 항목을 하나씩 훑어라: 구성품/충전기 "
+    "등 부속품 포함 여부, 제품 하자·상태, 결제수단, 환불조건, 거래 장소, "
+    "거래 일시. 대화가 길고 잡담·오타가 섞여 있어도 반드시 항목별로 훑고, "
+    "대화 어디에도 언급 자체가 없는 항목은 빠짐없이 missing_items에 넣어라. "
+    "특히 [수집된 정보]의 accessories가 빈 배열([])인 경우, 그것이 "
+    "'구성품 없음을 대화에서 확인함'인지 '구성품 얘기 자체가 없었음'인지 "
+    "대화록을 직접 보고 구분하라 — 언급 자체가 없었다면 반드시 "
+    "missing_items에 넣어라(예: '구성품/충전기 포함 여부').",
 ])
 
 
@@ -130,6 +138,30 @@ _FALLBACK_CONFIRM_QUESTIONS = [
 ]
 
 
+def _baseline_missing_items(extract, validation):
+    """extract 필드가 null인 항목의 결정론적 최소 목록. 값 유무가 명확한
+    string|null 필드(location~condition_info)만 대상으로 한다 — accessories는
+    빈 배열이 '없음 확인'과 '언급 자체 없음'을 구분 못 해 코드로는 판단 불가,
+    그건 프롬프트(JUDGE_SYSTEM_PROMPT 지시 11)에서 다룬다."""
+    missing_items = [
+        label for field, label in _MISSING_FIELD_LABELS.items() if not extract.get(field)
+    ]
+    missing_items += validation.get("missing_required", [])
+    return missing_items
+
+
+def _merge_missing_items(raw_missing, extract, validation):
+    """Solar가 낸 missing_items에 결정론적 baseline을 합집합으로 더한다.
+    실측으로, 대화가 길고 지저분해지면 Solar 혼자만의 판단이 언급 안 된
+    항목을 놓치는 경우가 확인됨 — 가격충돌(conflicts)처럼 코드검증 결과를
+    강제 반영하는 백스톱을 missing_items에도 동일하게 적용한다."""
+    merged = [m for m in raw_missing if isinstance(m, str) and m.strip()] if isinstance(raw_missing, list) else []
+    for label in _baseline_missing_items(extract, validation):
+        if not any(label in existing for existing in merged):
+            merged.append(label)
+    return merged
+
+
 def build_fallback_judgement(extract, validation):
     """Solar 호출이 실패했을 때 쓰는 보험. LLM 없이 extract/validate 결과만으로
     최소한의 판단을 만든다 — 데모 당일 Solar가 흔들려도 화면은 뜨게 한다."""
@@ -138,10 +170,7 @@ def build_fallback_judgement(extract, validation):
         candidates = validation.get("detected_price_candidates", [])
         conflicts.append(f"가격 후보가 여러 개 발견됐어요: {candidates}. 최종 합의 금액을 다시 확인해주세요.")
 
-    missing_items = [
-        label for field, label in _MISSING_FIELD_LABELS.items() if not extract.get(field)
-    ]
-    missing_items += validation.get("missing_required", [])
+    missing_items = _baseline_missing_items(extract, validation)
 
     risk_notes = [
         f"'{signal}' 발언이 있었어요. 거래 전 다시 한번 확인해보는 게 좋아요."
@@ -172,4 +201,5 @@ def judge(transcript, extract, validation, messages, speaker_mode):
     # 것이 실측으로 확인됨(§JUDGE_SCHEMA 주석 참조).
     judgement = {**extract, **raw}
     judgement["checklistItems"] = sanitize_checklist(raw.get("checklistItems"), messages)
+    judgement["missing_items"] = _merge_missing_items(raw.get("missing_items"), extract, validation)
     return judgement

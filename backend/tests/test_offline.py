@@ -329,6 +329,47 @@ def test_build_fallback_judgement():
     check("fallback has confirm questions", len(fallback["confirm_questions"]) >= 1, str(fallback))
 
 
+def test_merge_missing_items_backstops_solar_omission():
+    # 실측 버그 재현: 대화가 길고 지저분해지면 Solar가 missing_items를
+    # 빈 배열로 낼 수 있음 — extract에 null인 필드는 코드가 결정론적으로 보강한다.
+    extract_result = {
+        "item": "아이패드", "final_price": 370000, "location": None, "datetime": "8/3 오후",
+        "delivery_method": "직거래", "payment_method": None, "accessories": [],
+        "refund_policy": None, "condition_info": "액정은 필름만 교체하면 될 듯",
+        "risk_signals": [],
+    }
+    validation = {"missing_required": [], "detected_price_candidates": [370000], "price_conflict": False}
+    merged = judge._merge_missing_items([], extract_result, validation)
+    check("backstop adds missing location", "거래 장소" in merged, str(merged))
+    check("backstop adds missing payment_method", "결제 방식" in merged, str(merged))
+    check("backstop adds missing refund_policy", "환불 조건" in merged, str(merged))
+    check(
+        "backstop does not flag present condition_info",
+        "제품 상태" not in merged,
+        str(merged),
+    )
+    check(
+        "backstop does not flag present datetime",
+        "거래 시간" not in merged,
+        str(merged),
+    )
+
+
+def test_merge_missing_items_dedupes_against_solar_output():
+    extract_result = {
+        "item": "아이패드", "final_price": 370000, "location": None, "datetime": "8/3 오후",
+        "delivery_method": "직거래", "payment_method": "안심결제", "accessories": ["충전기"],
+        "refund_policy": "단순변심 환불 불가", "condition_info": "상태 좋음", "risk_signals": [],
+    }
+    validation = {"missing_required": [], "detected_price_candidates": [370000], "price_conflict": False}
+    merged = judge._merge_missing_items(["거래 장소가 명확하지 않아요"], extract_result, validation)
+    check(
+        "solar's own phrasing kept, no duplicate baseline label added",
+        merged == ["거래 장소가 명확하지 않아요"],
+        str(merged),
+    )
+
+
 def test_elements_to_messages_capture_index_preserved():
     elements = [_el("paragraph", "메시지", 0.16, 0.5, 0.3, 0.35)]
     messages = postprocess.elements_to_messages(elements, 2)
@@ -358,6 +399,8 @@ if __name__ == "__main__":
     test_elements_to_messages_noise_and_timestamp()
     test_elements_to_messages_capture_index_preserved()
     test_build_fallback_judgement()
+    test_merge_missing_items_backstops_solar_omission()
+    test_merge_missing_items_dedupes_against_solar_output()
 
     print()
     if FAILURES:
