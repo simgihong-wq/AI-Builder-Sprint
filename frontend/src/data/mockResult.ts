@@ -1,4 +1,5 @@
 import type { ChecklistItem, SolarJudgement } from "../types/promise";
+import type { AnalyzedData } from "../api/types";
 
 export const mockResult: SolarJudgement = {
   item: "애플 아이패드 에어 5세대 64GB",
@@ -57,3 +58,8 @@ export const mockChecklistItems: ChecklistItem[] = [
     relatedMessages: [],
   },
 ];
+
+export const mockAnalyzedData: AnalyzedData = {
+  result: mockResult,
+  checklistItems: mockChecklistItems,
+};

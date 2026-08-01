@@ -2,18 +2,19 @@ import { useRef, useState, type DragEvent } from "react";
 import { Logo } from "./ui/Logo";
 import { Button } from "./ui/Button";
 import { BottomBar } from "./ui/BottomBar";
+import { LoadingScreen } from "./LoadingScreen";
+import { analyzeImages, analyzeText } from "../api/analyze";
+import { USE_MOCK } from "../api/config";
+import { ApiError, type AnalyzedData } from "../api/types";
+import { mockAnalyzedData } from "../data/mockResult";
 
 interface UploadedFile {
   id: string;
   name: string;
   sizeLabel: string;
   pattern: 0 | 1;
+  file: File;
 }
-
-const seedFiles: UploadedFile[] = [
-  { id: "seed-1", name: "거래대화_1.png", sizeLabel: "1.2MB", pattern: 0 },
-  { id: "seed-2", name: "거래대화_2.png", sizeLabel: "0.9MB", pattern: 1 },
-];
 
 function formatSize(bytes: number) {
   const mb = bytes / (1024 * 1024);
@@ -52,11 +53,18 @@ function FileThumbnail({ pattern }: { pattern: 0 | 1 }) {
   );
 }
 
-export function UploadScreen({ onNext }: { onNext: () => void }) {
+interface UploadScreenProps {
+  onAnalyzed: (data: AnalyzedData) => void;
+}
+
+export function UploadScreen({ onAnalyzed }: UploadScreenProps) {
   const [tab, setTab] = useState<"cap" | "txt">("cap");
-  const [files, setFiles] = useState<UploadedFile[]>(seedFiles);
+  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [text, setText] = useState("");
   const [tipOpen, setTipOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [phase, setPhase] = useState<"idle" | "loading" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const addFiles = (incoming: FileList | null) => {
@@ -66,6 +74,7 @@ export function UploadScreen({ onNext }: { onNext: () => void }) {
       name: file.name,
       sizeLabel: formatSize(file.size),
       pattern: (files.length + i) % 2 === 0 ? (0 as const) : (1 as const),
+      file,
     }));
     setFiles((prev) => [...prev, ...next]);
   };
@@ -80,9 +89,40 @@ export function UploadScreen({ onNext }: { onNext: () => void }) {
     addFiles(e.dataTransfer.files);
   };
 
+  const canSubmit = tab === "cap" ? files.length > 0 : text.trim().length >= 10;
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setErrorMessage(null);
+    setPhase("loading");
+    try {
+      let data: AnalyzedData;
+      if (USE_MOCK) {
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+        data = mockAnalyzedData;
+      } else if (tab === "cap") {
+        data = await analyzeImages(files.map((f) => f.file));
+      } else {
+        data = await analyzeText(text.trim());
+      }
+      onAnalyzed(data);
+    } catch (e) {
+      const message =
+        e instanceof ApiError
+          ? e.message
+          : "분석 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.";
+      setErrorMessage(message);
+      setPhase("error");
+    }
+  };
+
+  if (phase === "loading") {
+    return <LoadingScreen />;
+  }
+
   return (
     <div className="min-h-screen bg-bg">
-      <div className="mx-auto flex min-h-screen w-full max-w-[420px] flex-col">
+      <div className="screen-shell mx-auto flex min-h-screen w-full max-w-[420px] flex-col">
         <div className="flex h-[52px] flex-none items-center px-3">
           <Logo />
         </div>
@@ -229,6 +269,8 @@ export function UploadScreen({ onNext }: { onNext: () => void }) {
           {tab === "txt" && (
             <div>
               <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
                 placeholder="대화 내용을 그대로 붙여넣으세요."
                 className="min-h-[190px] w-full resize-none rounded-[18px] border-0 bg-surface p-[18px] text-[14.5px] leading-[1.7] tracking-[-0.02em] text-ink placeholder:text-text-tertiary focus:outline-none"
               />
@@ -237,10 +279,25 @@ export function UploadScreen({ onNext }: { onNext: () => void }) {
               </div>
             </div>
           )}
+
+          {phase === "error" && errorMessage && (
+            <div className="mt-3 rounded-[14px] bg-danger-bg px-4 py-3.5 text-[13px] leading-[1.55] text-danger">
+              <p>{errorMessage}</p>
+              <button
+                type="button"
+                onClick={() => onAnalyzed(mockAnalyzedData)}
+                className="mt-2 text-xs font-semibold underline underline-offset-2"
+              >
+                mock 데이터로 보기
+              </button>
+            </div>
+          )}
         </div>
 
         <BottomBar>
-          <Button onClick={onNext}>분석 시작하기</Button>
+          <Button onClick={handleSubmit} disabled={!canSubmit}>
+            {phase === "error" ? "다시 시도" : "분석 시작하기"}
+          </Button>
         </BottomBar>
       </div>
     </div>
