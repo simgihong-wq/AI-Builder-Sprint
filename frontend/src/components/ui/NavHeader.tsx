@@ -1,3 +1,5 @@
+import { Logo } from "./Logo";
+
 interface NavHeaderProps {
   title: string;
   onBack?: () => void;
@@ -17,6 +19,9 @@ export function NavHeader({ title, onBack }: NavHeaderProps) {
         </button>
       )}
       <span className="text-[15px] font-semibold">{title}</span>
+      <span className="ml-auto flex-none">
+        <Logo />
+      </span>
     </div>
   );
 }

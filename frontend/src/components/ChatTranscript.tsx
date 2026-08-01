@@ -8,7 +8,7 @@ function MessageText({ message }: { message: ChatMessage }) {
   return (
     <>
       {before}
-      <mark className="rounded-[3px] bg-[#FFE8A3] px-[2px] py-[1px] text-inherit">
+      <mark className="rounded-[3px] bg-[#FFE8A3] px-[2px] py-[1px] text-ink">
         {message.highlight}
       </mark>
       {after}
