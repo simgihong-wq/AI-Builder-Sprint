@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
-<title>약속지킴이 — 실제 연동 데모</title>
+<title>혹시 — 실제 연동 데모</title>
 <style>
   :root {
     --color-bg: #f2f4f6;
@@ -67,6 +67,7 @@
     font-size: 15px; cursor: pointer; display: grid; place-items: center;
   }
   .navheader .back:hover { background: var(--color-border); }
+  .logo { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; letter-spacing: -0.02em; color: var(--color-ink); }
 
   h1.title { margin: 4px 0 8px; font-size: 24px; font-weight: 700; line-height: 1.38; letter-spacing: -0.03em; }
   p.subtitle { margin: 0 0 24px; font-size: 15px; line-height: 1.5; color: var(--color-text-secondary); }
@@ -162,7 +163,7 @@
   .bubble { max-width: 82%; border-radius: 14px; padding: 10px 13px; font-size: 13.5px; line-height: 1.5; }
   .bubble.me { align-self: flex-end; border-bottom-right-radius: 5px; background: var(--color-primary); color: #fff; }
   .bubble.other { align-self: flex-start; border-bottom-left-radius: 5px; background: var(--color-bg); color: var(--color-ink); }
-  .bubble mark { background: #ffe8a3; border-radius: 3px; padding: 1px 2px; color: inherit; }
+  .bubble mark { background: #ffe8a3; border-radius: 3px; padding: 1px 2px; color: var(--color-ink); }
 
   .promise-card { background: var(--color-surface); border-radius: 22px; overflow: hidden; box-shadow: 0 6px 24px rgba(25,31,40,.07); }
   .promise-head { padding: 24px 22px 20px; color: #fff; background: linear-gradient(135deg, #3182F6, #1B64DA); }
@@ -191,12 +192,7 @@
 </head>
 <body>
 <div class="page">
-  <div class="devnote">
-    ⚙️ 이 페이지는 <b>frontend/ 파일을 전혀 수정하지 않고</b> 프론트 디자인만 복사해 만든
-    독립 데모입니다. 실제로 입력하면 아래 백엔드 API로 fetch를 보내 진짜 파이프라인 결과를
-    받아옵니다. 먼저 <code>cd backend && python app.py</code>로 서버를 띄우세요.
-    <input id="api-base" value="http://localhost:5000" />
-  </div>
+  <input type="hidden" id="api-base" value="http://127.0.0.1:5000" />
 
   <div class="phone">
     <div class="spinner-overlay" id="spinner">
@@ -205,7 +201,15 @@
     </div>
 
     <section id="screen-upload" class="screen active">
-      <div class="navheader"><span>&nbsp;</span></div>
+      <div class="navheader">
+        <span class="logo">
+          <svg width="20" height="20" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+            <path d="M6 10a6 6 0 0 1 6-6h12a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H15l-6.5 5.2c-.7.56-1.75.06-1.75-.84V26a6 6 0 0 1-.75-.12A6 6 0 0 1 6 20V10Z" fill="var(--color-primary)"></path>
+            <text x="18" y="21" text-anchor="middle" font-family="Pretendard, -apple-system, sans-serif" font-size="15" font-weight="800" fill="#fff">?</text>
+          </svg>
+          혹시
+        </span>
+      </div>
       <h1 class="title">거래 대화를<br />올려주세요</h1>
       <p class="subtitle">빠진 약속이 없는지 확인해드릴게요.</p>
 
@@ -241,6 +245,13 @@
       <div class="navheader">
         <button class="back" data-back="upload">←</button>
         <span>거래 분석 결과</span>
+        <span class="logo" style="margin-left:auto">
+          <svg width="20" height="20" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+            <path d="M6 10a6 6 0 0 1 6-6h12a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H15l-6.5 5.2c-.7.56-1.75.06-1.75-.84V26a6 6 0 0 1-.75-.12A6 6 0 0 1 6 20V10Z" fill="var(--color-primary)"></path>
+            <text x="18" y="21" text-anchor="middle" font-family="Pretendard, -apple-system, sans-serif" font-size="15" font-weight="800" fill="#fff">?</text>
+          </svg>
+          혹시
+        </span>
       </div>
       <h1 class="title" id="summary-title"></h1>
       <p class="subtitle">대화 <span id="summary-msgcount"></span>개를 읽고 정리했어요.</p>
@@ -267,6 +278,13 @@
       <div class="navheader">
         <button class="back" data-back="summary">←</button>
         <span>확인 체크리스트</span>
+        <span class="logo" style="margin-left:auto">
+          <svg width="20" height="20" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+            <path d="M6 10a6 6 0 0 1 6-6h12a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H15l-6.5 5.2c-.7.56-1.75.06-1.75-.84V26a6 6 0 0 1-.75-.12A6 6 0 0 1 6 20V10Z" fill="var(--color-primary)"></path>
+            <text x="18" y="21" text-anchor="middle" font-family="Pretendard, -apple-system, sans-serif" font-size="15" font-weight="800" fill="#fff">?</text>
+          </svg>
+          혹시
+        </span>
       </div>
       <h1 class="title" id="checklist-title"></h1>
       <p class="subtitle">복사해서 그대로 보내세요.</p>
@@ -285,6 +303,13 @@
       <div class="navheader">
         <button class="back" data-back="checklist">←</button>
         <span>약속 카드</span>
+        <span class="logo" style="margin-left:auto">
+          <svg width="20" height="20" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+            <path d="M6 10a6 6 0 0 1 6-6h12a6 6 0 0 1 6 6v10a6 6 0 0 1-6 6H15l-6.5 5.2c-.7.56-1.75.06-1.75-.84V26a6 6 0 0 1-.75-.12A6 6 0 0 1 6 20V10Z" fill="var(--color-primary)"></path>
+            <text x="18" y="21" text-anchor="middle" font-family="Pretendard, -apple-system, sans-serif" font-size="15" font-weight="800" fill="#fff">?</text>
+          </svg>
+          혹시
+        </span>
       </div>
       <h1 class="title">약속이<br />정리됐어요</h1>
       <p class="subtitle">거래 전에 서로 한 번씩 확인해보세요.</p>
