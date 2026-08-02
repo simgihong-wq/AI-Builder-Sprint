@@ -13,7 +13,7 @@ export const mockResult: SolarJudgement = {
   condition_info: "배터리 92%",
   risk_signals: ["제가 급전이 필요해서"],
   conflicts: [],
-  missing_items: ["결제 방식", "배터리 성능", "하자가 있을 때"],
+  missing_items: ["결제 방식", "배터리 성능", "하자가 있을 때", "침수/수리 이력"],
   risk_notes: [
     "안심결제 질문에는 답하지 않고 직거래를 제안했어요. 서두르는 상대와의 거래는 확인할 시간을 갖는 게 좋아요.",
   ],
@@ -55,6 +55,14 @@ export const mockChecklistItems: ChecklistItem[] = [
     question: "받고 나서 문제가 있으면 어떻게 할까요?",
     description:
       "중고거래 분쟁에서 가장 많이 부딪히는 부분이에요. 미리 정해두면 서로 편해요.",
+    relatedMessages: [],
+  },
+  {
+    id: "water-damage",
+    label: "침수/수리 이력",
+    question: "혹시 침수되거나 메인보드 수리한 적 있나요?",
+    description:
+      "침수나 수리 이력은 육안으로 구분이 어려워요. 확인 안 하면 나중에 AS센터에서 유상수리 통보를 받을 수 있어요.",
     relatedMessages: [],
   },
 ];
