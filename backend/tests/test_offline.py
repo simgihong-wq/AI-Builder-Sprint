@@ -8,7 +8,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from pipeline import extract, judge, masking, postprocess, text_input, validate  # noqa: E402
+from pipeline import dispute_rules, extract, judge, masking, postprocess, text_input, validate  # noqa: E402
 
 FAILURES = []
 FIXTURE_PATH = os.path.join(os.path.dirname(__file__), "fixtures", "ipad_chat.txt")
@@ -370,6 +370,89 @@ def test_merge_missing_items_dedupes_against_solar_output():
     )
 
 
+def test_ensure_refund_checklist_item_adds_when_missing_and_uncovered():
+    items = [
+        {"id": "payment", "label": "결제 방식", "question": "q", "description": "d", "relatedMessages": []},
+    ]
+    result = judge._ensure_refund_checklist_item(items, ["환불 조건", "결제 방식"])
+    check("original item kept", result[0]["id"] == "payment", str(result))
+    check("refund item appended", result[-1]["label"] == "환불 조건", str(result))
+    check("refund item has fallback question", result[-1]["question"] == judge._REFUND_FALLBACK_QUESTION, str(result))
+
+
+def test_ensure_refund_checklist_item_skips_when_not_missing():
+    items = [{"id": "payment", "label": "결제 방식", "question": "q", "description": "d", "relatedMessages": []}]
+    result = judge._ensure_refund_checklist_item(items, ["결제 방식"])
+    check("no refund item added when not missing", len(result) == 1, str(result))
+
+
+def test_ensure_refund_checklist_item_skips_when_already_covered():
+    items = [{
+        "id": "refund", "label": "환불 조건", "question": "환불 가능한가요?",
+        "description": "d", "relatedMessages": [],
+    }]
+    result = judge._ensure_refund_checklist_item(items, ["환불 조건"])
+    check("no duplicate refund item added", len(result) == 1, str(result))
+
+
+def test_ensure_refund_checklist_item_caps_at_five():
+    items = [
+        {"id": f"item{i}", "label": f"l{i}", "question": "q", "description": "d", "relatedMessages": []}
+        for i in range(5)
+    ]
+    result = judge._ensure_refund_checklist_item(items, ["환불 조건"])
+    check("capped at 5 items total", len(result) == 5, str(result))
+    check("refund item present after cap", result[-1]["label"] == "환불 조건", str(result))
+    check("last original item dropped to make room", result[3]["id"] == "item3", str(result))
+
+
+def test_build_fallback_judgement_includes_refund_checklist_item():
+    extract_result = {
+        "item": "아이패드", "final_price": 370000, "location": "강남역", "datetime": "8/3 오후",
+        "delivery_method": "직거래", "payment_method": "안심결제", "accessories": ["충전기"],
+        "refund_policy": None, "condition_info": "상태 좋음", "risk_signals": [],
+    }
+    validation = {"missing_required": [], "detected_price_candidates": [370000], "price_conflict": False}
+    fallback = judge.build_fallback_judgement(extract_result, validation)
+    check(
+        "fallback surfaces refund policy as a checklist item, not just a missing_items string",
+        any(item["label"] == "환불 조건" for item in fallback["checklistItems"]),
+        str(fallback["checklistItems"]),
+    )
+
+
+def test_classify_category_matches_expected_bucket():
+    check("아이패드 -> 전자기기", dispute_rules.classify_category("애플 아이패드 에어 5세대") == "전자기기")
+    check("콘서트 티켓 -> 티켓", dispute_rules.classify_category("싸이 흠뻑쇼 콘서트 티켓 2매") == "티켓")
+    check("패딩 -> 의류", dispute_rules.classify_category("몽클레르 패딩 55") == "의류")
+    check("냉장고 -> 가구·가전", dispute_rules.classify_category("삼성 4도어 냉장고") == "가구·가전")
+    check("매칭 안 되면 None", dispute_rules.classify_category("자전거") is None)
+    check("빈 문자열도 None", dispute_rules.classify_category("") is None)
+
+
+def test_build_category_prompt_block_lists_five_items_for_match():
+    block = dispute_rules.build_category_prompt_block("아이폰 15 프로")
+    check("header mentions category", "전자기기" in block.split("\n")[0], block)
+    check("5 items listed", len([line for line in block.split("\n") if line.startswith("- ")]) == 5, block)
+
+
+def test_build_category_prompt_block_empty_for_no_match():
+    block = dispute_rules.build_category_prompt_block("자전거")
+    check("no block when category unmatched", block == "", block)
+
+
+def test_build_user_message_injects_category_block_when_matched():
+    extract_result = {"item": "아이패드 에어", "final_price": 370000}
+    msg = judge.build_user_message("대화 내용", extract_result, {}, "explicit")
+    check("category block injected", "[품목별 확인 포인트 — 전자기기]" in msg, msg)
+
+
+def test_build_user_message_omits_category_block_when_unmatched():
+    extract_result = {"item": "자전거", "final_price": 100000}
+    msg = judge.build_user_message("대화 내용", extract_result, {}, "explicit")
+    check("no category block injected", "[품목별 확인 포인트" not in msg, msg)
+
+
 def test_elements_to_messages_capture_index_preserved():
     elements = [_el("paragraph", "메시지", 0.16, 0.5, 0.3, 0.35)]
     messages = postprocess.elements_to_messages(elements, 2)
@@ -401,6 +484,16 @@ if __name__ == "__main__":
     test_build_fallback_judgement()
     test_merge_missing_items_backstops_solar_omission()
     test_merge_missing_items_dedupes_against_solar_output()
+    test_ensure_refund_checklist_item_adds_when_missing_and_uncovered()
+    test_ensure_refund_checklist_item_skips_when_not_missing()
+    test_ensure_refund_checklist_item_skips_when_already_covered()
+    test_ensure_refund_checklist_item_caps_at_five()
+    test_build_fallback_judgement_includes_refund_checklist_item()
+    test_classify_category_matches_expected_bucket()
+    test_build_category_prompt_block_lists_five_items_for_match()
+    test_build_category_prompt_block_empty_for_no_match()
+    test_build_user_message_injects_category_block_when_matched()
+    test_build_user_message_omits_category_block_when_unmatched()
 
     print()
     if FAILURES:

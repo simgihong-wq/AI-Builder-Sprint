@@ -5,7 +5,7 @@ checklistItems 확장 지시를 시스템 프롬프트에 그대로 반영한다
 import json
 import re
 
-from . import schemas, upstage_client
+from . import dispute_rules, schemas, upstage_client
 
 JUDGE_SYSTEM_PROMPT = "\n".join([
     "너는 중고거래 채팅 대화록을 검토해 빠진 약속과 분쟁 리스크를 찾는 판사 역할이다.",
@@ -52,6 +52,18 @@ JUDGE_SYSTEM_PROMPT = "\n".join([
     "'구성품 없음을 대화에서 확인함'인지 '구성품 얘기 자체가 없었음'인지 "
     "대화록을 직접 보고 구분하라 — 언급 자체가 없었다면 반드시 "
     "missing_items에 넣어라(예: '구성품/충전기 포함 여부').",
+    "12. missing_items에 '환불 조건'이 포함되면 그걸 목록에만 남겨두지 말고 "
+    "checklistItems에도 반드시 하나의 항목으로 포함시켜라(3~5개 중 우선순위 "
+    "최상위로). 물건을 받은 뒤 하자를 발견했을 때 환불 여부를 두고 다투는 "
+    "경우가 많아, 다른 결측 항목보다 실제로 화면에 노출되어야 할 중요도가 "
+    "높다.",
+    "13. [품목별 확인 포인트] 섹션이 주어지면, 그 항목들을 대화록과 하나씩 "
+    "대조하라. 대화에서 전혀 다뤄지지 않은 항목은 missing_items에 그 항목의 "
+    "짧은 한국어 라벨(예: '침수/수리 이력')로 추가하고, checklistItems 후보로 "
+    "고려하라. 이미 대화에서 명확히 확인된 항목은 다시 묻지 마라. 이 섹션이 "
+    "없으면 무시하고 기존 범용 체크(지시 11)만 따르라. checklistItems 총 "
+    "개수는 지시 8의 3~5개 제한을 넘지 않도록, 가장 리스크가 큰 항목 위주로 "
+    "우선순위를 조정하라.",
 ])
 
 
@@ -61,6 +73,9 @@ def build_user_message(transcript, extract, validation, speaker_mode):
         "[수집된 정보 (Extract)]", json.dumps(extract, ensure_ascii=False, indent=2), "",
         "[코드 검증 결과]", json.dumps(validation, ensure_ascii=False, indent=2),
     ]
+    category_block = dispute_rules.build_category_prompt_block(extract.get("item"))
+    if category_block:
+        parts += ["", category_block]
     if speaker_mode == "unknown":
         parts += [
             "",
@@ -171,6 +186,47 @@ def _merge_missing_items(raw_missing, extract, validation):
     return merged
 
 
+_REFUND_LABEL = "환불 조건"
+_REFUND_FALLBACK_QUESTION = "받은 후 문제가 있으면 어떻게 하기로 하셨는지 확인해 주실 수 있을까요?"
+_REFUND_FALLBACK_DESCRIPTION = (
+    "환불·교환 조건을 미리 정해두지 않으면 물건에 문제가 있어도 환불받기 "
+    "어려울 수 있어요. 거래 전에 확인해두는 게 안전해요."
+)
+
+
+def _ensure_refund_checklist_item(items, missing_items):
+    """환불조건은 나중에 몰라서 손해보는 리스크가 커서, missing_items에는
+    잡혔는데 Solar가 checklistItems(실제 화면 카드)에는 안 넣는 경우를
+    코드로 보강한다."""
+    if not any(_REFUND_LABEL in m for m in missing_items):
+        return items
+
+    covered = any(
+        _REFUND_LABEL in (item.get("label", "") + item.get("question", ""))
+        for item in items
+    )
+    if covered:
+        return items
+
+    existing_ids = {item.get("id") for item in items}
+    item_id = "refund-policy"
+    suffix = 2
+    while item_id in existing_ids:
+        item_id = f"refund-policy-{suffix}"
+        suffix += 1
+
+    backstop = {
+        "id": item_id,
+        "label": _REFUND_LABEL,
+        "question": _REFUND_FALLBACK_QUESTION,
+        "description": _REFUND_FALLBACK_DESCRIPTION,
+        "relatedMessages": [],
+    }
+    if len(items) >= 5:
+        items = items[:4]
+    return items + [backstop]
+
+
 def build_fallback_judgement(extract, validation):
     """Solar 호출이 실패했을 때 쓰는 보험. LLM 없이 extract/validate 결과만으로
     최소한의 판단을 만든다 — 데모 당일 Solar가 흔들려도 화면은 뜨게 한다."""
@@ -192,6 +248,7 @@ def build_fallback_judgement(extract, validation):
         "missing_items": missing_items,
         "risk_notes": risk_notes,
         "confirm_questions": list(_FALLBACK_CONFIRM_QUESTIONS),
+        "checklistItems": _ensure_refund_checklist_item([], missing_items),
     }
 
 
@@ -211,4 +268,7 @@ def judge(transcript, extract, validation, messages, speaker_mode):
     judgement = {**extract, **raw}
     judgement["checklistItems"] = sanitize_checklist(raw.get("checklistItems"), messages)
     judgement["missing_items"] = _merge_missing_items(raw.get("missing_items"), extract, validation)
+    judgement["checklistItems"] = _ensure_refund_checklist_item(
+        judgement["checklistItems"], judgement["missing_items"]
+    )
     return judgement
