@@ -289,8 +289,10 @@
       <h1 class="title" id="checklist-title"></h1>
       <p class="subtitle">복사해서 그대로 보내세요.</p>
 
-      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
-      <div class="progress-label" id="progress-label"></div>
+      <div id="checklist-progress-wrap">
+        <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="progress-label" id="progress-label"></div>
+      </div>
 
       <div id="checklist-items"></div>
 
@@ -482,7 +484,9 @@ function row(label, value, opts = {}) {
 function renderSummary() {
   const r = DATA.result;
   const n = DATA.checklistItems.length;
-  document.getElementById("summary-title").innerHTML = `확인이 필요한<br />${n}가지가 있어요`;
+  document.getElementById("summary-title").innerHTML = n > 0
+    ? `확인이 필요한<br />${n}가지가 있어요`
+    : `확인할 내용이<br />따로 없어요`;
   document.getElementById("summary-msgcount").textContent = DATA.messages.length;
   document.getElementById("summary-alertsub").textContent = `위험 신호 ${r.risk_signals.length}개 · 미확인 ${n}개`;
   document.getElementById("summary-facts").innerHTML = [
@@ -500,7 +504,13 @@ function renderSummary() {
         <div class="risk-quote">"${esc(r.risk_signals[0])}"</div>
         <div class="risk-note">${esc(r.risk_notes[0] ?? "")}</div>
       </div>` : "";
-  document.getElementById("summary-next-btn").textContent = `확인할 ${n}가지 보기`;
+
+  // 체크리스트가 비어 있으면 요약 -> 체크리스트를 건너뛰고 바로 카드로,
+  // 뒤로가기도 카드 -> 요약으로 되돌아가게 한다 (03619eb 프론트 수정 이식).
+  const nextBtn = document.getElementById("summary-next-btn");
+  nextBtn.textContent = n > 0 ? `확인할 ${n}가지 보기` : "약속 카드 보기";
+  nextBtn.dataset.next = n > 0 ? "checklist" : "card";
+  document.querySelector("#screen-card .back").dataset.back = n > 0 ? "checklist" : "summary";
 }
 
 function toggleCheck(btn) {
@@ -515,7 +525,10 @@ function toggleCheck(btn) {
 
 function renderChecklist() {
   const items = DATA.checklistItems;
-  document.getElementById("checklist-title").innerHTML = `이 ${items.length}가지만<br />물어보면 돼요`;
+  document.getElementById("checklist-title").innerHTML = items.length > 0
+    ? `이 ${items.length}가지만<br />물어보면 돼요`
+    : `확인할 내용이<br />따로 없어요`;
+  document.getElementById("checklist-progress-wrap").style.display = items.length > 0 ? "" : "none";
   document.getElementById("progress-label").textContent = `0/${items.length} 확인했어요`;
   document.getElementById("progress-fill").style.width = "0%";
   document.getElementById("checklist-items").innerHTML = items.map(item => {
