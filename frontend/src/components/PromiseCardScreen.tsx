@@ -71,7 +71,10 @@ export function PromiseCardScreen({ result, onBack }: PromiseCardScreenProps) {
                 label="결제"
                 value={result.payment_method ?? "미정"}
               />
-              <ReceiptRow label="배터리" value={result.condition_info ?? "-"} />
+              <ReceiptRow
+                label="제품 상태"
+                value={result.condition_info ?? "-"}
+              />
               <ReceiptRow label="하자 시" value={result.refund_policy ?? "-"} />
               <ReceiptRow
                 label="구성품"
